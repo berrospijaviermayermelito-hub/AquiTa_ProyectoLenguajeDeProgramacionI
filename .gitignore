@@ -1,0 +1,6 @@
+aquita
+aquita.exe
+*.o
+datos/
+reportes/
+.vs/
