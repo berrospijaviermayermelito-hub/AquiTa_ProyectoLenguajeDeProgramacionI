@@ -8,7 +8,10 @@ namespace cat {
 
 // Listas entre las que el usuario elige (en vez de escribir texto libre).
 extern const std::vector<std::string> CATEGORIAS;
-extern const std::vector<std::string> LUGARES;  // TODO: completar con los lugares reales del campus
+extern const std::vector<std::string> ZONAS;
+extern const std::vector<std::string> PISOS;
+extern const std::vector<std::string> LUGARES_GUARDADO;
+extern const std::vector<std::string> LUGARES;
 
 // Estados de cada entidad (misma tabla que la matriz).
 enum class EstadoReporte { Pendiente, Recuperado, Cancelado };
