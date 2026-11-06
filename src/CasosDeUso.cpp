@@ -96,7 +96,6 @@ void uc04BuscarObjetoEncontrado(Sistema& s, bool esResponsable) {
                  "  2. Categoría\n"
                  "  3. Lugar del hallazgo\n";
     if (esResponsable) std::cout << "  4. Código\n";
-    // TODO (FEAT05): agregar la búsqueda por fecha del hallazgo para el Responsable.
     int opcion = util::leerEntero("Elige una opción: ", 1, esResponsable ? 4 : 3);
 
     std::string valor;
@@ -182,7 +181,6 @@ void uc13ListadoGeneral(Sistema& s) {
     std::cout << "\nTotal mostrado: " << mostrados << "\n";
 }
 
-// ============================================================ PENDIENTES (TODO)
 
 // ============================================================ UC01 (LISTO)
 // FEAT01: permitir buscar un reporte de objeto perdido por: código, nombre, categoría o estado.
