@@ -4,6 +4,7 @@
 #include <vector>
 #include <algorithm>
 #include <fstream>
+#include <filesystem>  
 
 #include "Catalogos.h"
 #include "Coincidencias.h"
@@ -14,12 +15,6 @@
 
 static bool mismoCodigo(const std::string& a, const std::string& b) {
     return util::normalizar(a) == util::normalizar(b);
-}
-
-static void pendiente(const std::string& uc, const std::string& nombre) {
-    std::cout << "\n[" << uc << "] " << nombre
-              << ": aún no implementado.\n"
-                 "Mira el TODO de esta función en src/CasosDeUso.cpp: ahí están las reglas de la matriz.\n";
 }
 
 // ============================================================ UC02 (LISTO)
@@ -690,8 +685,9 @@ void uc08BuscarSolicitud(Sistema& s) {
                      "  1. pendiente\n"
                      "  2. aprobada\n"
                      "  3. rechazada\n"
-                     "  4. cancelada\n";
-        int estOp = util::leerEntero("Elige el estado: ", 1, 4);
+                     "  4. cancelada\n"
+                     "  5. entregada\n";
+        int estOp = util::leerEntero("Elige el estado: ", 1, 5);
         estadoBuscado = static_cast<cat::EstadoSolicitud>(estOp - 1);
     }
 
@@ -829,11 +825,11 @@ void uc11EvaluarSolicitud(Sistema& s) {
     } else if (decision == 1) {
         // APROBAR
         solicitudElegida->setEstado(cat::EstadoSolicitud::Aprobada);
-        objeto->setEstado(cat::EstadoObjeto::Devuelto); // El objeto pasa a devuelto/entregado con éxito
+        // El objeto sigue «en proceso» hasta que se registre la entrega (UC12).
         s.guardarTodo();
         std::cout << "\n¡Solicitud APROBADA con éxito!\n"
                   << "  - La solicitud [" << solicitudElegida->codigo() << "] pasa a estado «aprobada».\n"
-                  << "  - El objeto [" << objeto->codigo() << "] ha sido marcado como «devuelto» / entregado.\n";
+                  << "  - El objeto [" << objeto->codigo() << "] sigue «en proceso» hasta registrar la entrega (UC12).\n";
     } else if (decision == 2) {
         // RECHAZAR
         solicitudElegida->setEstado(cat::EstadoSolicitud::Rechazada);
@@ -887,6 +883,7 @@ void uc12RegistrarEntrega(Sistema& s) {
     std::string codigoRecibe = util::leerObligatorio("Código universitario de quien recibe: ");
 
     // 3. Actualizar estados según las reglas del negocio
+    solicitudElegida->setEntrega(fechaDevolucion, nombreRecibe, codigoRecibe);  // FEAT16
     solicitudElegida->setEstado(cat::EstadoSolicitud::Entregada);
 
     ObjetoEncontrado* objeto = s.objetos.buscarPorCodigo(solicitudElegida->codigoObjeto());
@@ -916,62 +913,61 @@ void uc14GenerarReportes(Sistema& s) {
     std::cout << "Define el rango de fechas para los reportes:\n";
     Fecha fechaInicio = Fecha::leer("Fecha inicial");
     Fecha fechaFin = Fecha::leer("Fecha final");
+    while (fechaInicio > fechaFin) {
+        std::cout << "  La fecha inicial no puede ser posterior a la final.\n";
+        fechaInicio = Fecha::leer("Fecha inicial");
+        fechaFin = Fecha::leer("Fecha final");
+    }
 
-    // -------------------------------------------------------------
-    // FEAT19: Reporte de objetos perdidos y encontrados en el rango
-    // -------------------------------------------------------------
-    std::string rutaFeat19 = "reportes_perdidos_encontrados.txt";
-    std::ofstream archivo19(rutaFeat19);
-    if (archivo19.is_open()) {
-        archivo19 << "=== REPORTE DE OBJETOS PERDIDOS Y ENCONTRADOS ===\n\n";
-        
-        archivo19 << "[OBJETOS ENCONTRADOS]\n";
+    std::filesystem::create_directories("reportes");
+    const std::string rutaFeat19 = "reportes/reporte_perdidos_encontrados.txt";
+    const std::string rutaFeat20 = "reportes/reporte_devueltos.txt";
+    const std::string rutaFeat21 = "reportes/reporte_sin_reclamar.txt";
+
+    // FEAT19: objetos perdidos y encontrados dentro del rango
+    {
+        std::ofstream f(rutaFeat19);
+        f << "=== REPORTE DE OBJETOS PERDIDOS Y ENCONTRADOS ===\n"
+          << "Rango: " << fechaInicio.aTexto() << " al " << fechaFin.aTexto() << "\n\n";
+        f << "[OBJETOS ENCONTRADOS]\n";
         for (const auto& obj : s.objetos.todos()) {
-            archivo19 << " - " << obj.resumen() << " | Lugar: " << obj.lugarGuardado() << "\n";
+            if (obj.fecha() >= fechaInicio && obj.fecha() <= fechaFin)
+                f << " - " << obj.resumen() << " | Lugar: " << obj.lugarGuardado() << "\n";
         }
-
-        archivo19 << "\n[REPORTES PERDIDOS]\n";
+        f << "\n[REPORTES PERDIDOS]\n";
         for (const auto& rep : s.reportes.todos()) {
-            archivo19 << " - " << rep.resumen() << " | Estudiante: " << rep.contactoCodigo() << "\n";
+            if (rep.fecha() >= fechaInicio && rep.fecha() <= fechaFin)
+                f << " - " << rep.resumen() << " | Estudiante: " << rep.contactoCodigo() << "\n";
         }
-        archivo19.close();
     }
 
-    // -------------------------------------------------------------
-    // FEAT20: Reporte de objetos devueltos en el rango
-    // -------------------------------------------------------------
-    std::string rutaFeat20 = "reportes_devueltos.txt";
-    std::ofstream archivo20(rutaFeat20);
-    if (archivo20.is_open()) {
-        archivo20 << "=== REPORTE DE OBJETOS DEVUELTOS / ENTREGADOS ===\n\n";
-        
+    // FEAT20: objetos devueltos (según la fecha de devolución de la solicitud entregada)
+    {
+        std::ofstream f(rutaFeat20);
+        f << "=== REPORTE DE OBJETOS DEVUELTOS ===\n"
+          << "Rango: " << fechaInicio.aTexto() << " al " << fechaFin.aTexto() << "\n\n";
+        for (const auto& sol : s.solicitudes.todas()) {
+            if (sol.estado() != cat::EstadoSolicitud::Entregada) continue;
+            if (sol.fechaDevolucion() < fechaInicio || sol.fechaDevolucion() > fechaFin) continue;
+            ObjetoEncontrado* obj = s.objetos.buscarPorCodigo(sol.codigoObjeto());
+            f << " - " << (obj ? obj->resumen() : sol.codigoObjeto())
+              << " | Entregado el " << sol.fechaDevolucion().aTexto()
+              << " a " << sol.receptorNombres() << " (" << sol.receptorCodigo() << ")\n";
+        }
+    }
+
+    // FEAT21: objetos sin reclamar, con los días guardados
+    {
+        std::ofstream f(rutaFeat21);
+        f << "=== REPORTE DE OBJETOS SIN RECLAMAR ===\n\n";
         for (const auto& obj : s.objetos.todos()) {
-            if (obj.estado() == cat::EstadoObjeto::Devuelto) {
-                archivo20 << " - " << obj.resumen() << "\n";
-            }
+            if (obj.estado() != cat::EstadoObjeto::Disponible) continue;
+            long dias = Fecha::diasEntre(obj.fecha(), Fecha::hoy());
+            f << " - " << obj.resumen() << " | Días guardado: " << dias << "\n";
         }
-        archivo20.close();
     }
 
-    // -------------------------------------------------------------
-    // FEAT21: Reporte de objetos sin reclamar (con días acumulados)
-    // -------------------------------------------------------------
-    std::string rutaFeat21 = "reportes_sin_reclamar.txt";
-    std::ofstream archivo21(rutaFeat21);
-    if (archivo21.is_open()) {
-        archivo21 << "=== REPORTE DE OBJETOS SIN RECLAMAR ===\n\n";
-        
-        for (const auto& obj : s.objetos.todos()) {
-            if (obj.estado() == cat::EstadoObjeto::Disponible) {
-                int diasAcumulados = Fecha::diasEntre(obj.fecha(), Fecha::hoy());
-                archivo21 << " - " << obj.resumen() 
-                          << " | Días en custodia sin reclamar: " << diasAcumulados << " días\n";
-            }
-        }
-        archivo21.close();
-    }
-
-    std::cout << "\n¡Reportes generados con éxito en la raíz del proyecto!\n"
+    std::cout << "\n¡Reportes generados con éxito en la carpeta reportes/!\n"
               << "  1. " << rutaFeat19 << " [FEAT19]\n"
               << "  2. " << rutaFeat20 << " [FEAT20]\n"
               << "  3. " << rutaFeat21 << " [FEAT21]\n";
