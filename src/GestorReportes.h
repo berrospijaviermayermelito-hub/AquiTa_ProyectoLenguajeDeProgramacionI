@@ -17,9 +17,6 @@ public:
     std::vector<ObjetoPerdido*> filtrar(const std::function<bool(const ObjetoPerdido&)>& criterio);
     const std::vector<ObjetoPerdido>& todos() const { return reportes_; }
 
-    // TODO (opcional): depurar() para eliminar definitivamente reportes cancelados,
-    // igual que GestorObjetos::depurar().
-
     size_t cantidad() const { return reportes_.size(); }
 
 private:

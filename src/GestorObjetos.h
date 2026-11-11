@@ -33,6 +33,9 @@ public:
     // elimina definitivamente un objeto ya desactivado (vector::erase).
     bool depurar(const std::string& codigo);
 
+    // Vuelve a ordenar por fecha (más reciente primero) después de editar una fecha.
+    void reordenar();
+
     size_t cantidad() const { return objetos_.size(); }
 
 private:

@@ -16,8 +16,7 @@ void ObjetoEncontrado::mostrar() const {
               << "  Estado:      " << cat::aTexto(estado_) << "\n";
 }
 
-// TODO (FEAT10): confirmar con el equipo qué datos muestra la ficha pública.
-// Por ahora muestra lo que ayuda a reconocer el objeto y dónde recogerlo.
+// FEAT10: ficha pública, sin el estado del objeto.
 void ObjetoEncontrado::mostrarFicha() const {
     Objeto::mostrar();
     std::cout << "  Guardado en: " << lugarGuardado_ << "\n";

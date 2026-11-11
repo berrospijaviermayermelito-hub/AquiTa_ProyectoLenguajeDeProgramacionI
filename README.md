@@ -1,8 +1,7 @@
 # AquiTa — Sistema de objetos perdidos y encontrados (C++17, consola)
 
-Esqueleto del proyecto basado en la matriz de requerimientos v2. Compila sin avisos y ya
-guarda y carga datos. Cuatro casos de uso están completos como ejemplo del patrón; el resto
-tiene un `TODO` con las reglas exactas de la matriz.
+Proyecto basado en la matriz de requerimientos v2. Compila sin avisos, guarda y carga datos,
+y todos los casos de uso (UC01 a UC14) están implementados.
 
 ## Cómo compilar y ejecutar
 
@@ -21,21 +20,6 @@ y en *Propiedades → C/C++ → Idioma* elige **C++17**; en *C/C++ → Línea de
 
 El programa crea solas las carpetas `datos/` y `reportes/` junto al ejecutable. Ejecútalo
 siempre desde la carpeta del proyecto para que encuentre `datos/`.
-
-## Qué está hecho
-
-| UC | Caso de uso | Estado |
-|---|---|---|
-| UC02 | Registrar objeto perdido | Listo |
-| UC04 | Buscar objeto encontrado (ficha pública para el estudiante) | Listo |
-| UC05 | Registrar objeto encontrado | Listo |
-| UC13 | Listado general por estado | Listo |
-| SUPL01 y SUPL02 | Guardar y cargar archivos | Listo |
-| UC01, UC03, UC06, UC07 | Buscar reporte, gestionar reporte, gestionar objeto, coincidencias | TODO |
-| UC08, UC09, UC10, UC11, UC12, UC14 | Solicitudes, evaluación, entrega, reportes | TODO |
-
-Busca los pendientes con `grep -n "TODO" src/*.cpp src/*.h`. Cada uno dice qué estados
-cambiar, qué validar y qué archivo generar.
 
 ## Estructura
 

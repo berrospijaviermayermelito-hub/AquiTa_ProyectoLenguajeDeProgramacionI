@@ -18,7 +18,6 @@ void Solicitud::mostrar() const {
               << "  Objeto:        " << codigoObjeto_ << "\n"
               << "  Fecha:         " << fechaSolicitud_.aTexto() << "\n"
               << "  Estado:        " << cat::aTexto(estado_) << "\n"
-              << "  Observación:   " << (observacion_.empty() ? "-" : observacion_) << "\n"
               << "  Devolución:    " << fechaDevolucion_.aTexto() << "\n"
               << "  Recibió:       " << (receptorNombres_.empty() ? "-" : receptorNombres_)
               << " (código " << (receptorCodigo_.empty() ? "-" : receptorCodigo_) << ")\n";

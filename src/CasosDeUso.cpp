@@ -333,6 +333,17 @@ void uc03GestionarReporte(Sistema& s, const std::string& codigoEstudiante) {
         // FEAT04: Cancelar reporte
         if (util::confirmar("¿Estás seguro de cancelar este reporte?")) {
             reporteEncontrado->setEstado(cat::EstadoReporte::Cancelado);
+            // Al cancelar el reporte se cancelan sus solicitudes en curso y se libera el objeto.
+            std::vector<Solicitud*> enCurso = s.solicitudes.filtrar([&](const Solicitud& sol) {
+                return mismoCodigo(sol.codigoReporte(), reporteEncontrado->codigo()) &&
+                       (sol.estado() == cat::EstadoSolicitud::Pendiente ||
+                        sol.estado() == cat::EstadoSolicitud::Aprobada);
+            });
+            for (Solicitud* sol : enCurso) {
+                sol->setEstado(cat::EstadoSolicitud::Cancelada);
+                ObjetoEncontrado* obj = s.objetos.buscarPorCodigo(sol->codigoObjeto());
+                if (obj) obj->setEstado(cat::EstadoObjeto::Disponible);
+            }
             s.guardarTodo(); // Persistir cambios (SUPL01)
             std::cout << "\nEl reporte ha sido marcado como «cancelado».\n";
         } else {
@@ -402,7 +413,7 @@ void uc07SugerirCoincidencias(Sistema& s, const std::string& codigoEstudiante) {
         return a.puntaje > b.puntaje;
     });
 
-    // 4. Mostrar de 3 a 5 objetos sugeridos
+    // 4. Mostrar hasta 5 objetos sugeridos
     std::cout << "\n¡Objetos encontrados que podrían ser el tuyo (ordenados por coincidencia)!\n";
     size_t mostrarMax = std::min(size_t(5), listaCoincidencias.size());
     
@@ -447,6 +458,18 @@ void uc09RegistrarSolicitud(Sistema& s, const std::string& codigoEstudiante) {
 
     if (!reporteElegido) {
         std::cout << "No se encontró un reporte pendiente tuyo con ese código.\n";
+        return;
+    }
+
+    // RNF06: un reporte solo puede tener una solicitud en curso (pendiente o aprobada).
+    std::vector<Solicitud*> enCurso = s.solicitudes.filtrar([&](const Solicitud& sol) {
+        return mismoCodigo(sol.codigoReporte(), reporteElegido->codigo()) &&
+               (sol.estado() == cat::EstadoSolicitud::Pendiente ||
+                sol.estado() == cat::EstadoSolicitud::Aprobada);
+    });
+    if (!enCurso.empty()) {
+        std::cout << "Ese reporte ya tiene una solicitud en curso (" << enCurso[0]->codigo()
+                  << "). Espera su resultado o cancélala antes de crear otra.\n";
         return;
     }
 
@@ -614,6 +637,7 @@ void uc06GestionarObjetoEncontrado(Sistema& s) {
         objetoEncontrado->setFecha(nuevaFecha);
         objetoEncontrado->setLugar(nuevoLugar);
         objetoEncontrado->setLugarGuardado(nuevoGuardado);
+        s.objetos.reordenar();  // FEAT06: mantener el orden por fecha del hallazgo
 
         s.guardarTodo(); // Persistir cambios inmediatamente (SUPL01)
         std::cout << "\n¡Objeto actualizado y guardado con éxito!\n";
@@ -622,6 +646,11 @@ void uc06GestionarObjetoEncontrado(Sistema& s) {
         // FEAT08: Desactivar objeto
         if (objetoEncontrado->estado() == cat::EstadoObjeto::Desactivado) {
             std::cout << "El objeto ya se encuentra desactivado.\n";
+            return;
+        }
+        if (objetoEncontrado->estado() != cat::EstadoObjeto::Disponible) {
+            std::cout << "Solo se puede desactivar un objeto «disponible». Este objeto está «"
+                      << cat::aTexto(objetoEncontrado->estado()) << "».\n";
             return;
         }
         if (util::confirmar("¿Estás seguro de desactivar este objeto por registro erróneo?")) {
@@ -639,7 +668,8 @@ void uc06GestionarObjetoEncontrado(Sistema& s) {
             return;
         }
         if (util::confirmar("¿Estás seguro de ELIMINAR DEFINITIVAMENTE este registro de la base de datos?")) {
-            if (s.objetos.depurar(codigo)) {
+            std::string codigoReal = objetoEncontrado->codigo();
+            if (s.objetos.depurar(codigoReal)) {
                 s.guardarTodo();
                 std::cout << "\nEl objeto ha sido depurado y eliminado definitivamente del sistema.\n";
             } else {
@@ -877,6 +907,11 @@ void uc12RegistrarEntrega(Sistema& s) {
 
     // 2. Pedir fecha de devolución y datos de quien recibe
     Fecha fechaDevolucion = Fecha::leer("Fecha de devolución/entrega");
+    while (fechaDevolucion < solicitudElegida->fechaSolicitud()) {
+        std::cout << "  La entrega no puede ser anterior a la solicitud ("
+                  << solicitudElegida->fechaSolicitud().aTexto() << ").\n";
+        fechaDevolucion = Fecha::leer("Fecha de devolución/entrega");
+    }
     std::string nombreRecibe = util::leerObligatorio("Nombre de la persona que recibe el objeto: ");
     std::string codigoRecibe = util::leerObligatorio("Código universitario de quien recibe: ");
 
@@ -925,6 +960,10 @@ void uc14GenerarReportes(Sistema& s) {
     // FEAT19: objetos perdidos y encontrados dentro del rango
     {
         std::ofstream f(rutaFeat19);
+        if (!f) {
+            std::cout << "ERROR: no se pudo crear el archivo " << rutaFeat19 << ".\n";
+            return;
+        }
         f << "=== REPORTE DE OBJETOS PERDIDOS Y ENCONTRADOS ===\n"
           << "Rango: " << fechaInicio.aTexto() << " al " << fechaFin.aTexto() << "\n\n";
         f << "[OBJETOS ENCONTRADOS]\n";
@@ -942,6 +981,10 @@ void uc14GenerarReportes(Sistema& s) {
     // FEAT20: objetos devueltos (según la fecha de devolución de la solicitud entregada)
     {
         std::ofstream f(rutaFeat20);
+        if (!f) {
+            std::cout << "ERROR: no se pudo crear el archivo " << rutaFeat20 << ".\n";
+            return;
+        }
         f << "=== REPORTE DE OBJETOS DEVUELTOS ===\n"
           << "Rango: " << fechaInicio.aTexto() << " al " << fechaFin.aTexto() << "\n\n";
         for (const auto& sol : s.solicitudes.todas()) {
@@ -957,6 +1000,10 @@ void uc14GenerarReportes(Sistema& s) {
     // FEAT21: objetos sin reclamar, con los días guardados
     {
         std::ofstream f(rutaFeat21);
+        if (!f) {
+            std::cout << "ERROR: no se pudo crear el archivo " << rutaFeat21 << ".\n";
+            return;
+        }
         f << "=== REPORTE DE OBJETOS SIN RECLAMAR ===\n\n";
         for (const auto& obj : s.objetos.todos()) {
             if (obj.estado() != cat::EstadoObjeto::Disponible) continue;

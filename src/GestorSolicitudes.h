@@ -19,9 +19,6 @@ public:
     std::vector<Solicitud*> filtrar(const std::function<bool(const Solicitud&)>& criterio);
     const std::list<Solicitud>& todas() const { return solicitudes_; }
 
-    // TODO (UC10, opcional): eliminar() definitivo con list::erase, si el equipo lo decide.
-    // Por la matriz, cancelar solo cambia el estado a «cancelada».
-
     size_t cantidad() const { return solicitudes_.size(); }
 
 private:

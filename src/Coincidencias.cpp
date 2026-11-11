@@ -20,7 +20,6 @@ static std::unordered_set<std::string> extraerPalabras(const std::string& texto)
 
 double calcularPuntaje(const ObjetoPerdido& reporte, const ObjetoEncontrado& objeto) {
     // 1. Factor de Nombre (peso 50)
-    // Proporción de palabras en común respecto al total de palabras únicas de ambos o intersección/unión (Jaccard)
     std::unordered_set<std::string> palabrasRep = extraerPalabras(reporte.nombre());
     std::unordered_set<std::string> palabrasObj = extraerPalabras(objeto.nombre());
 
@@ -34,8 +33,7 @@ double calcularPuntaje(const ObjetoPerdido& reporte, const ObjetoEncontrado& obj
             comunes++;
         }
     }
-    // Proporción de coincidencia basada en el tamaño del reporte o unión
-    // Usaremos la proporción en relación con las palabras del reporte buscado:
+    // Proporción de palabras del nombre del reporte que también están en el nombre del objeto.
     double factorNombre = static_cast<double>(comunes) / static_cast<double>(palabrasRep.size());
 
     // 2. Factor de Categoría (peso 30) - 1 si coincide, 0 si no

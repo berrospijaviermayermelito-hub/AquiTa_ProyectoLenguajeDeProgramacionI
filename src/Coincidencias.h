@@ -4,13 +4,11 @@
 #include "ObjetoEncontrado.h"
 #include "ObjetoPerdido.h"
 
-// TODO (UC07 / FEAT11): implementar según la matriz.
+// Fórmula de la matriz (UC07 / FEAT11):
 //   puntaje = 50 * factorNombre + 30 * factorCategoria + 20 * factorLugar
-//   - factorNombre   = proporción de palabras en común entre los nombres (0 a 1).
+//   - factorNombre   = proporción de palabras del reporte presentes en el objeto (0 a 1).
 //   - factorCategoria = 1 si las categorías coinciden, 0 si no.
 //   - factorLugar     = 1 si el lugar de la pérdida y del hallazgo coinciden, 0 si no.
-// Pistas: separar el nombre en palabras con std::istringstream; comparar con
-// util::normalizar() para ignorar mayúsculas y tildes.
-// Luego, en CasosDeUso (uc07), recorrer los objetos «disponible», calcular el puntaje,
-// quedarse con los de 30 o más, ordenarlos de mayor a menor con std::sort y mostrar de 3 a 5.
+// En CasosDeUso (uc07) se recorren los objetos «disponible», se calcula el puntaje,
+// se conservan los de 30 o más, se ordenan de mayor a menor con std::sort y se muestran hasta 5.
 double calcularPuntaje(const ObjetoPerdido& reporte, const ObjetoEncontrado& objeto);

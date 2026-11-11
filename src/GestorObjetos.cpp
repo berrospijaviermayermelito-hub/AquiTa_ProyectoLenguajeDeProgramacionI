@@ -59,3 +59,10 @@ bool GestorObjetos::depurar(const std::string& codigo) {
     }
     return false;
 }
+
+void GestorObjetos::reordenar() {
+    std::stable_sort(objetos_.begin(), objetos_.end(),
+                     [](const ObjetoEncontrado& a, const ObjetoEncontrado& b) {
+                         return a.fecha() > b.fecha();
+                     });
+}
